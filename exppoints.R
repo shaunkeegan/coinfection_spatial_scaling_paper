@@ -1,18 +1,31 @@
-## ---------------------- exppoints()
-## Takes value 'distance' 
-##  returns the number of trap locations within that distance of the central point
+##  Returns the number of trap locations within specified distance of the central point
 ##
 
+##----------------------------------------------------------------------------##
+##                              ARGUMENTS                                     ##
+##----------------------------------------------------------------------------##
+##
+##  distance: (numeric) - radius (in m) of the desired neighbourhood 
+##
+##----------------------------------------------------------------------------##
+
+
+##  USES max.point and trap.interval specified in 'execute.parasite.function' for grid structure 
 
 
 exppoints <- function(distance){
   
-  #create a minigrid centred on {0,0}, with coordinates within x metres in all directions of that central point
-  vals2 <- seq(-max.point,max.point,by=trap.interval)
-  distmatrix2 <- as.data.frame(permutations(n=length(vals2),r=2,v=vals2,repeats.allowed=T))            #n=vec size; r=number to choose each time
-  colnames(distmatrix2) <- c("lat", "long")                 #give them sensible names
-  distmatrix2$dist <- sqrt((0 - distmatrix2$lat)^2 + (0 - distmatrix2$long)^2)
+  #Create a sequence of all 1-d coordinates up to 'max.point' in both directions of central point
+  vals <- seq(-max.point, max.point, by=trap.interval)
   
-  return(nrow(distmatrix2[distmatrix2$dist<=distance,]))
+  #create a 2-d mini-grid centred on {0,0}, with coordinates in all directions of that central point
+  distmatrix <- as.data.frame(permutations(n=length(vals), r=2, v=vals, repeats.allowed=T))
+  colnames(distmatrix) <- c("long", "lat")  
+  
+  #Calculate Euclidean distances of each point in distmatrix from the central point 
+  distmatrix$dist <- sqrt((0 - distmatrix$long)^2 + (0 - distmatrix$lat)^2)
+  
+  #Return the number of points lying within specified distance of the central point
+  return(nrow(distmatrix[distmatrix$dist<=distance,]))
 
 }

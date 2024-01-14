@@ -1,102 +1,148 @@
-## ---------------------- parasite.function.vary.time()
-##
-##
-##
+##  Collates NH variables: NemInf/Uninf/NemPrev, Nemtotbuden/Nemmeanburden; Eiminf/Eimuninf/EimPrev for each focal entry at each NH size
 ##
 
-parasite.function.vary.time <- function (dat, dat2, neighbour.variable, dist, time.window){
-  ## -------------------- inputs ---
-  ## dat            - dataset of neighbours
-  ## dat2           - dataset of focals
-  ## neighbour.variable  - the column in 'dat' for neighbour infection status by the effecting parasite  
-  ## dist           - the list of neighbourhood sizes to work through
-  ## time.window    - the desired window to consider neighbour effects prior to the focal's capture date
-  ## -------------------------------
-  
-  for (NH.dist in 1:length(dist)){ # cycle through all possible neighbourhood sizes
+##----------------------------------------------------------------------------##
+##                              ARGUMENTS                                     ##
+##----------------------------------------------------------------------------##
+##   
+##  neighbourdat: (dataframe) - neighbour dataset for characterising neighbourhood infection levels around each focal
+##  focaldat: (dataframe) - focal dataset, including individual-level variables for each focal
+##  neighbour.variable.INF: (character) - which variable in neighbourdat relates to neighbour nematode infection status (presence/absence) 
+##  neighbour.variable.EPG: (character) - which variable in neighbourdat relates to neighbour nematode EPG
+##  focalsp.NH.INF: (character) - which variable in neighbourdat relates to neighbour Eimeria infection status (presence/absence)
+##  dist (numeric vector) - all possible  neighbourhood sizes (in m) around focal
+##  time.window (character or numeric) - the time window to consider neighbours within ("ALL" indicates any time)
+##
+##----------------------------------------------------------------------------##
+
+
+
+parasite.function.vary.time <- function (neighbourdat, focaldat, neighbour.variable.INF, neighbour.variable.EPG, focalsp.NH.INF, dist, time.window){
+
+  for (NH.dist in 1:length(dist)){ # cycle through all possible neighbourhood sizes within 'dist'
     
-    no <- length(unique(dat2$ID.CapDate)) # All ID.CapDate entries
+    no <- length(unique(focaldat$ID.CapDate)) # Number of unique ID.CapDate entries to process
     
-    for (i in 1:no){ # loop through all ID.CapDate entries
+    for (i in 1:no){ # loop through all unique ID.CapDate entries
       
-      infsum <- 0
-      uninfsum <- 0
+      #Set NH parasite cumulative variables to 0 for current focal
+      Neminfsum <- 0
+      Nemuninfsum <- 0
+      Nemburdsum <- 0  
       
-      #Get X,Y,date for focal individual
-      focal.X <- dat2[i,"X"]
-      focal.Y <- dat2[i,"Y"]
-      focal.date <- dat2[i,"Capture.date"]
+      Eiminfsum <- 0   
+      Eimuninfsum <- 0
+
       
-      #Create vector of all possible neighbourhood sizes 
-      dist_vec <- make.dist.vector(dist[NH.dist], trap.interval)
+      #Get X,Y,date for current focal individual
+      focal.X <- focaldat[i,"X"]
+      focal.Y <- focaldat[i,"Y"]
+      focal.date <- focaldat[i,"Capture.date"]
+      
+      
+      # Calculate Percentage of the NH in the grid
+      #1) All possible distances to trap locations within current NH size
+      dist_vec <- make.dist.vector(dist[NH.dist])
       dist_vec <- sort(dist_vec)
       
-      #generate list of number of points for each value of 'dist' from central point
-      numpoints <- apply(as.array(dist_vec),1,exppoints)	#gives a list 1, 5, 9, 13, 21, ... for all values in 'dist_vec'
-      #bind that list to dist_vec
+      #2) generate list of number of points for each value of 'dist' from central point
+      numpoints <- apply(as.array(dist_vec), 1, exppoints)	#gives a list 1, 5, 9, 13, 21, ... for all values in 'dist'
+
+      #3) bind that list to dist_vec and round to 1 dp
       dnumpoint <- as.data.frame(cbind (dist_vec, numpoints))
       dnumpoint$dist_vec <- round(dist_vec, digits = 1)
-      dat2[i,PropOnGrid[NH.dist]] <- prop.on.grid(focal.X, focal.Y, dist_vec[NH.dist], dnumpoint["dist_vec"])
+      
+      #4) calculate proportion of neighbourhood on the grid around the focal, and add to focaldat df
+      focaldat[i,PropOnGrid[NH.dist]] <- prop.on.grid(focal.X, focal.Y, dist_vec[NH.dist], dnumpoint)
       
       
-      # Subset animals on same grid in same year 
-      GRID <- as.character(dat2[i, "Grid"])
-      YEAR <- dat2[i,"year"]
-      dat.subset <- dat[which (dat$Grid == GRID & dat$year == YEAR),]
+      #Subset neighbourhood data to the focal's Grid and Year of capture
+      GRID <- as.character(focaldat[i, "Grid"])
+      YEAR <- focaldat[i,"year"]
+      neighbourdat.subset <- neighbourdat[which (neighbourdat$Grid == GRID & neighbourdat$year == YEAR),] 
       
-      #Go through each non-focal, work out distance from focal, 
-      # if within specified neighbourhood and specified capture window of focal,
-      # increment number of animals and infected animals, depending on infection status
+      
+      #Check what time lag to consider, subset neighbourdat accordingly, and process
       
       if(time.window == "ALL"){
-        for (j in 1:length(dat.subset$ID.CapDate)){ # Loop through all other animals
-          neighbour.Y <- dat.subset[j,"Y"]
-          neighbour.X <- dat.subset[j,"X"]
-          temp.date <- dat.subset[j,"Capture.date"]
+        for (j in 1:length(neighbourdat.subset$ID.CapDate)){ # Loop through each neighbour in turn
+          neighbour.Y <- neighbourdat.subset[j,"Y"]
+          neighbour.X <- neighbourdat.subset[j,"X"]
+          temp.date <- neighbourdat.subset[j,"Capture.date"]
           
+          #Calculate neighbour's capture distance from focal
           neighbourdist <- sqrt((focal.X - neighbour.X)^2 + (focal.Y - neighbour.Y)^2)
           
+          #If neighbour lies within current NH size and was captured before focal, process...
           if(neighbourdist <= dist[NH.dist] &
              temp.date < focal.date ){
             
-            ifelse(dat.subset[j,neighbour.variable]==1, infsum <- infsum + 1, 
-                   ifelse(dat.subset[j,neighbour.variable]==0, uninfsum <- uninfsum + 1, NA))	
+            #Accumulate nem infection status (number of infecteds) in NH
+            ifelse(neighbourdat.subset[j,neighbour.variable.INF]==1, Neminfsum <- Neminfsum + 1, 
+                   ifelse(neighbourdat.subset[j,neighbour.variable.INF]==0, Nemuninfsum <- Nemuninfsum + 1, NA))	
+            #Accumulate nem infection burden (mean EPG) in NH
+            ifelse(is.na(neighbourdat.subset[j,neighbour.variable.EPG]), NA, 
+                   Nemburdsum <- Nemburdsum + neighbourdat.subset[j,neighbour.variable.EPG])
+            #Accumulate focal infection status (number of infecteds) in NH
+            ifelse(neighbourdat.subset[j,focalsp.NH.INF]==1, Eiminfsum <- Eiminfsum + 1, 
+                   ifelse(neighbourdat.subset[j,focalsp.NH.INF]==0, Eimuninfsum <- Eimuninfsum + 1, NA))	
             
-          }	#Close if
-        }	#Close j loop
-      }else{
-        for (j in 1:length(dat.subset$ID.CapDate)){ # Loop through all other animals
-          neighbour.Y <- dat.subset[j,"Y"]
-          neighbour.X <- dat.subset[j,"X"]
-          temp.date <- dat.subset[j,"Capture.date"]
+          }	#Close if neighbour is to be processed
+        }	#Close j (neighbour) loop 
+        
+      }else{  #time.window!="ALL"
+        
+        for (j in 1:length(neighbourdat.subset$ID.CapDate)){ # Loop through each neighbour
+          neighbour.Y <- neighbourdat.subset[j,"Y"]
+          neighbour.X <- neighbourdat.subset[j,"X"]
+          temp.date <- neighbourdat.subset[j,"Capture.date"]
           window.date <- as.Date(focal.date) - time.window
           
+          #Calculate neighbour's capture distance from focal
           neighbourdist <- sqrt((focal.X - neighbour.X)^2 + (focal.Y - neighbour.Y)^2)
           
+          #If neighbour lies within current NH size and was captured before focal but within window.date, process...
           if(neighbourdist <= dist[NH.dist] &
              temp.date < focal.date &
              temp.date >= window.date){
             
-            ifelse(dat.subset[j,neighbour.variable]==1, infsum <- infsum + 1, 
-                   ifelse(dat.subset[j,neighbour.variable]==0, uninfsum <- uninfsum + 1, NA))	
+            #Accumulate nem infection status (number of infecteds) in NH
+            ifelse(neighbourdat.subset[j,neighbour.variable.INF]==1, Neminfsum <- Neminfsum + 1, 
+                   ifelse(neighbourdat.subset[j,neighbour.variable.INF]==0, Nemuninfsum <- Nemuninfsum + 1, NA))	
+            #Accumulate nem infection burden (mean EPG) in NH
+            ifelse(is.na(neighbourdat.subset[j,neighbour.variable.EPG]), NA, 
+                   Nemburdsum <- Nemburdsum + neighbourdat.subset[j,neighbour.variable.EPG])
+            #Accumulate focal infection status (number of infecteds) in NH
+            ifelse(neighbourdat.subset[j,focalsp.NH.INF]==1, Eiminfsum <- Eiminfsum + 1, 
+                   ifelse(neighbourdat.subset[j,focalsp.NH.INF]==0, Eimuninfsum <- Eimuninfsum + 1, NA))
             
-          }	#Close if
-        }	#Close j loop
+          }	#Close if neighbour is to be processed 
+        }	#Close j (neighbour) loop 
       }
       
       
-      #Update relevant neighbourhood count variables in main dataset
-      dat2[i,NoInf[NH.dist]] <- infsum
-      dat2[i,NoUninf[NH.dist]] <- uninfsum
-      dat2[i,Prev[NH.dist]] <- infsum/(infsum + uninfsum)
-      dat2[i, NoTotal[NH.dist]] <- infsum + uninfsum 
+      #Collate all output variables
+      Nemtotnum <- Neminfsum + Nemuninfsum
+      Eimtotnum <- Eiminfsum + Eimuninfsum
+      focaldat[i,NemNoInf[NH.dist]] <- Neminfsum
+      focaldat[i,NemNoUninf[NH.dist]] <- Nemuninfsum
+      focaldat[i,NemPrev[NH.dist]] <- ifelse(Nemtotnum > 0, Neminfsum/Nemtotnum, 0)
+      focaldat[i, NemNoTotal[NH.dist]] <- Nemtotnum / focaldat[i, PropOnGrid[NH.dist]]
       
+      #Note, these are logged + 1 burdens
+      focaldat[i,NemTotBurden[NH.dist]] <- log(Nemburdsum+1)
+      focaldat[i,NemMeanBurden[NH.dist]] <- ifelse(Nemtotnum > 0, log(Nemburdsum/Nemtotnum+1), 0)
+      
+      focaldat[i,EimNoInf[NH.dist]] <- Eiminfsum
+      focaldat[i,EimNoUninf[NH.dist]] <- Eimuninfsum
+      focaldat[i,EimPrev[NH.dist]] <- ifelse(Eimtotnum > 0, Eiminfsum/Eimtotnum, 0)
+      focaldat[i, EimNoTotal[NH.dist]] <- Eimtotnum / focaldat[i, PropOnGrid[NH.dist]] 
       
     }
     
     
   }
   
-  return(dat2)
+  return(focaldat)
   
 }

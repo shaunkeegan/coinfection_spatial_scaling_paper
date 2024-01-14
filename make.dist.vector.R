@@ -1,29 +1,36 @@
-## Creates vector of all possible neighbourhood sizes 
+##  Creates vector of all possible neighbourhood sizes 
 ##  from 0 to specified 'max.point' on a trapping grid with trap locations 'trap.interval'. apart
 ##
 
+##----------------------------------------------------------------------------##
+##                              ARGUMENTS                                     ##
+##----------------------------------------------------------------------------##
+##
+## maxdist: (numeric) - maximum specified neighbourhood size
+##
+##----------------------------------------------------------------------------##
 
-make.dist.vector <- function(max.point, trap.interval){ # Define function
+
+##  USES trap.interval specified in 'execute.parasite.function' for grid structure 
+
+
+make.dist.vector <- function(maxdist){ 
+
+  #Create a sequence of all 1-d coordinates up to 'maxdist' from 0
+  vals <- seq(0, maxdist, by=trap.interval)	
   
-  ##----------------------------------------------------------------------------##
-  ##                                  ARGS                                      ##
-  ##----------------------------------------------------------------------------##
-  ##  max.point - Maximum radius (in m) around focal animal                     ##
-  ##  trap.interval - Distances (in m) between trapping points on grid          ##
-  ##----------------------------------------------------------------------------##
+  #create a 2-d mini-grid anchored at hypothetical focal location {0,0}, with all coordinates from that point
+  distmatrix <- as.data.frame(permutations(n = length(vals), r=2, v=vals, repeats.allowed = T)) 
+  colnames(distmatrix) <- c("long", "lat") 
   
- 
+  #Calculate Euclidean distances of each point in distmatrix from {0,0} 
+  distmatrix$distfromfoc <- sqrt((0 - distmatrix$long)^2 + (0 - distmatrix$lat)^2) 
   
-  
-  vals3 <- seq(0, max.point, by=trap.interval)	
-  distmatrix3 <- as.data.frame(permutations(n = length(vals3), r=2, v=vals3, repeats.allowed = T)) # n=vec size; r=number to choose each time
-  colnames(distmatrix3) <- c("lat", "long") # Give them sensible names
-  
-  tempmat <- distmatrix3
-  tempmat$distfromfoc <- sqrt((0 - tempmat$lat)^2 + (0 - tempmat$long)^2) 
-  
-  dist <- unique(tempmat$distfromfoc)
+  #Extract the unique distances across the mini-grid, and sort by distance
+  dist <- unique(distmatrix$distfromfoc)
   dist <- sort(dist)
-  dist <- dist[which (dist <= max.point)]
+
+  #Extract only those distances that lie within 'maxdist' of the focal
+  dist <- dist[which (dist <= maxdist)]
   return(dist)
 }
