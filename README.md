@@ -12,11 +12,11 @@ These data were collected in 2012 as part of a broader piece of work exploring t
 
 There are three ways to recreate the figures in the paper: 
 
-    **1)**	from scratch, generating the neighbourhood data files (step #1 below), followed by running the statistical analysis code (step #2) and the plotting code to generate the figures (step #3);
+    1)	from scratch, generating the neighbourhood data files (step #1 below), followed by running the statistical analysis code (step #2) and the plotting code to generate the figures (step #3);
     
-    **2)**	use the previously-generated neighbourhood data files (“DATA -…csv”) and just run the statistical analysis code (step #2) and the plotting code to generate the figures (step #3);
+    2)	use the previously-generated neighbourhood data files (“DATA -…csv”) and just run the statistical analysis code (step #2) and the plotting code to generate the figures (step #3);
     
-    **3)**	use the previously-generated statistical output files (“STATS - …csv”) and just run the plotting code to generate the figures (step #3).
+    3)	use the previously-generated statistical output files (“STATS - …csv”) and just run the plotting code to generate the figures (step #3).
 
 
 **Step 1: Open file** `execute.parasite.function.R`. This file takes raw data (described below) and generates neighbourhood data files that includes information on number of neighbours, and their infection statuses, for each focal capture in the raw data set. These neighbourhood data files (`DATA - …csv`) are then used for the statistical analyses in step #2 below.
