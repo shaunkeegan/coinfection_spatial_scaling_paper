@@ -109,12 +109,12 @@ And more specifically:
 | Sex           | Mouse Sex (M/F/NA) |
 | Age           | Mouse Age (Adult/NotAdult/NA) |
 | treated.Y.N   | Whether an animal has been treated with the anthelmintic ivermectin (0/1) |
-| EhungInt      | Infection intensity of E. hungaryensis |
-| EhungInf      | Presence or absence of E. hungaryensis (0/1) |
-| EappInt       | Infection intensity of E. apionoides |
-| EappInf       | Presence or absence of E. apionoides (0/1)  |
-| H.poly.EPG    | Infection intensity of H. polygyrus |
-| HpolINF       | Presence or absence of H. polygyrus (0/1)  |
+| EhungInt      | Infection intensity of _E. hungaryensis_ |
+| EhungInf      | Presence or absence of _E. hungaryensis_ (0/1) |
+| EappInt       | Infection intensity of _E. apionoides_ |
+| EappInf       | Presence or absence of _E. apionoides_ (0/1)  |
+| H.poly.EPG    | Infection intensity of _H. polygyrus_ |
+| HpolINF       | Presence or absence of _H. polygyrus_ (0/1)  |
 
 
 
